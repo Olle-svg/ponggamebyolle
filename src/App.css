@@ -40,3 +40,11 @@
 .read-the-docs {
   color: #888;
 }
+
+.bild{
+  background-image: url("Sticklinge.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  min-height: 100vh;
+}
