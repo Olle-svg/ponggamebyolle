@@ -3,12 +3,12 @@ import { Trophy, RotateCcw, Home } from 'lucide-react';
 
 interface GameOverProps {
   winner: string;
-  onRestart: () => void;
+  onRestart?: () => void;
   onMainMenu: () => void;
 }
 
 export const GameOver = ({ winner, onRestart, onMainMenu }: GameOverProps) => {
-  const isPlayer1 = winner === 'Player 1';
+  const isPlayer1 = winner === 'Player 1' || winner === 'Host';
 
   return (
     <motion.div 
@@ -56,14 +56,16 @@ export const GameOver = ({ winner, onRestart, onMainMenu }: GameOverProps) => {
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.7 }}
         >
-          <button
-            onClick={onRestart}
-            className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg neon-border
-                       bg-primary/20 hover:bg-primary/30 transition-all font-orbitron text-primary"
-          >
-            <RotateCcw className="w-5 h-5" />
-            Play Again
-          </button>
+          {onRestart && (
+            <button
+              onClick={onRestart}
+              className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg neon-border
+                         bg-primary/20 hover:bg-primary/30 transition-all font-orbitron text-primary"
+            >
+              <RotateCcw className="w-5 h-5" />
+              Play Again
+            </button>
+          )}
           
           <button
             onClick={onMainMenu}

@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
-import { User, Users } from 'lucide-react';
+import { User, Users, Wifi } from 'lucide-react';
 
 interface ModeSelectorProps {
-  onSelectMode: (isTwoPlayer: boolean) => void;
+  onSelectMode: (mode: 'single' | 'local' | 'online-create' | 'online-join') => void;
 }
 
 export const ModeSelector = ({ onSelectMode }: ModeSelectorProps) => {
@@ -28,7 +28,7 @@ export const ModeSelector = ({ onSelectMode }: ModeSelectorProps) => {
 
       <div className="flex flex-col md:flex-row gap-6 mt-4">
         <motion.button
-          onClick={() => onSelectMode(false)}
+          onClick={() => onSelectMode('single')}
           className="group relative px-8 py-6 rounded-xl neon-border bg-card/50 backdrop-blur-sm
                      hover:bg-primary/10 transition-all duration-300 min-w-[200px]"
           initial={{ x: -100, opacity: 0 }}
@@ -45,7 +45,7 @@ export const ModeSelector = ({ onSelectMode }: ModeSelectorProps) => {
         </motion.button>
 
         <motion.button
-          onClick={() => onSelectMode(true)}
+          onClick={() => onSelectMode('local')}
           className="group relative px-8 py-6 rounded-xl neon-border-pink bg-card/50 backdrop-blur-sm
                      hover:bg-secondary/10 transition-all duration-300 min-w-[200px]"
           initial={{ x: 100, opacity: 0 }}
@@ -61,6 +61,47 @@ export const ModeSelector = ({ onSelectMode }: ModeSelectorProps) => {
           </div>
         </motion.button>
       </div>
+
+      {/* Online multiplayer section */}
+      <motion.div
+        className="flex flex-col items-center gap-4 mt-6"
+        initial={{ y: 50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.6 }}
+      >
+        <div className="flex items-center gap-2 text-accent">
+          <Wifi className="w-5 h-5" />
+          <span className="text-sm font-orbitron">ONLINE MULTIPLAYER</span>
+        </div>
+
+        <div className="flex gap-4">
+          <motion.button
+            onClick={() => onSelectMode('online-create')}
+            className="group relative px-6 py-4 rounded-xl bg-accent/20 hover:bg-accent/30 
+                       transition-all duration-300 neon-border"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-lg font-orbitron font-bold text-accent">CREATE PARTY</span>
+              <span className="text-xs text-muted-foreground">Host a game</span>
+            </div>
+          </motion.button>
+
+          <motion.button
+            onClick={() => onSelectMode('online-join')}
+            className="group relative px-6 py-4 rounded-xl bg-accent/20 hover:bg-accent/30 
+                       transition-all duration-300 neon-border"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-lg font-orbitron font-bold text-accent">JOIN PARTY</span>
+              <span className="text-xs text-muted-foreground">Enter code</span>
+            </div>
+          </motion.button>
+        </div>
+      </motion.div>
 
       <motion.div 
         className="mt-8 text-center text-sm text-muted-foreground max-w-md"

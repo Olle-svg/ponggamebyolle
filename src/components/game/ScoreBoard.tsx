@@ -4,9 +4,17 @@ interface ScoreBoardProps {
   player1Score: number;
   player2Score: number;
   isTwoPlayer: boolean;
+  player1Label?: string;
+  player2Label?: string;
 }
 
-export const ScoreBoard = ({ player1Score, player2Score, isTwoPlayer }: ScoreBoardProps) => {
+export const ScoreBoard = ({ 
+  player1Score, 
+  player2Score, 
+  isTwoPlayer,
+  player1Label,
+  player2Label 
+}: ScoreBoardProps) => {
   return (
     <div className="flex items-center justify-center gap-8 md:gap-16 mb-6">
       <motion.div 
@@ -14,7 +22,9 @@ export const ScoreBoard = ({ player1Score, player2Score, isTwoPlayer }: ScoreBoa
         initial={{ x: -50, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
       >
-        <p className="text-sm md:text-base font-orbitron text-primary mb-1">PLAYER 1</p>
+        <p className="text-sm md:text-base font-orbitron text-primary mb-1">
+          {player1Label?.toUpperCase() || 'PLAYER 1'}
+        </p>
         <motion.p 
           className="text-4xl md:text-6xl font-pixel text-primary text-glow-cyan"
           key={player1Score}
@@ -34,7 +44,7 @@ export const ScoreBoard = ({ player1Score, player2Score, isTwoPlayer }: ScoreBoa
         animate={{ x: 0, opacity: 1 }}
       >
         <p className="text-sm md:text-base font-orbitron text-secondary mb-1">
-          {isTwoPlayer ? 'PLAYER 2' : 'AI'}
+          {player2Label?.toUpperCase() || (isTwoPlayer ? 'PLAYER 2' : 'AI')}
         </p>
         <motion.p 
           className="text-4xl md:text-6xl font-pixel text-secondary text-glow-pink"
