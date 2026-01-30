@@ -15,6 +15,11 @@ export interface PartyState {
   host_score: number;
   guest_score: number;
   game_status: 'waiting' | 'playing' | 'paused' | 'finished';
+  max_players: number;
+  current_players: number;
+  player_ids: string[];
+  player_positions: unknown;
+  eliminated_players: string[];
 }
 
 const generatePartyCode = (): string => {

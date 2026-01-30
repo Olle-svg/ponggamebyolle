@@ -14,6 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
+      friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string
+          id?: string
+          requester_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string
+          id?: string
+          requester_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friendships_addressee_id_fkey"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_invites: {
+        Row: {
+          created_at: string
+          expires_at: string
+          from_profile_id: string
+          id: string
+          party_code: string
+          status: string
+          to_profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          from_profile_id: string
+          id?: string
+          party_code: string
+          status?: string
+          to_profile_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          from_profile_id?: string
+          id?: string
+          party_code?: string
+          status?: string
+          to_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_invites_from_profile_id_fkey"
+            columns: ["from_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_invites_to_profile_id_fkey"
+            columns: ["to_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_parties: {
         Row: {
           ball_dx: number | null
@@ -21,6 +108,8 @@ export type Database = {
           ball_x: number | null
           ball_y: number | null
           created_at: string
+          current_players: number | null
+          eliminated_players: string[] | null
           game_status: string | null
           guest_id: string | null
           guest_paddle_y: number | null
@@ -29,7 +118,10 @@ export type Database = {
           host_paddle_y: number | null
           host_score: number | null
           id: string
+          max_players: number | null
           party_code: string
+          player_ids: string[] | null
+          player_positions: Json | null
           updated_at: string
         }
         Insert: {
@@ -38,6 +130,8 @@ export type Database = {
           ball_x?: number | null
           ball_y?: number | null
           created_at?: string
+          current_players?: number | null
+          eliminated_players?: string[] | null
           game_status?: string | null
           guest_id?: string | null
           guest_paddle_y?: number | null
@@ -46,7 +140,10 @@ export type Database = {
           host_paddle_y?: number | null
           host_score?: number | null
           id?: string
+          max_players?: number | null
           party_code: string
+          player_ids?: string[] | null
+          player_positions?: Json | null
           updated_at?: string
         }
         Update: {
@@ -55,6 +152,8 @@ export type Database = {
           ball_x?: number | null
           ball_y?: number | null
           created_at?: string
+          current_players?: number | null
+          eliminated_players?: string[] | null
           game_status?: string | null
           guest_id?: string | null
           guest_paddle_y?: number | null
@@ -63,8 +162,44 @@ export type Database = {
           host_paddle_y?: number | null
           host_score?: number | null
           id?: string
+          max_players?: number | null
           party_code?: string
+          player_ids?: string[] | null
+          player_positions?: Json | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          last_seen: string | null
+          status: string | null
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          last_seen?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          last_seen?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string
         }
         Relationships: []
       }
