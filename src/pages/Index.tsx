@@ -188,17 +188,18 @@ const Index = () => {
     }
   }, [party?.game_status, screen, selectedPlayerCount]);
 
-  // Sync battle royale player IDs from party when guests join
+  // When a guest joins (guest_id populated), fill their slot with their real ID
   useEffect(() => {
-    if (!party?.player_ids || party.player_ids.length === 0) return;
+    if (!party?.guest_id) return;
     setBattlePlayers(prev =>
-      prev.map((p, i) => ({
-        ...p,
-        id: party.player_ids[i] ?? p.id,
-        name: i === 0 ? 'Host' : `Player ${i + 1}`,
-      }))
+      prev.map((p, i) => {
+        if (i === 1 && p.id.startsWith('waiting_')) {
+          return { ...p, id: party.guest_id as string, name: 'Player 2' };
+        }
+        return p;
+      })
     );
-  }, [party?.player_ids]);
+  }, [party?.guest_id]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 overflow-hidden relative">
