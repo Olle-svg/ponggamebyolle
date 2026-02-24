@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { soundEngine } from '@/lib/sound';
 
 interface Player {
   id: string;
@@ -181,18 +182,20 @@ export const BattleRoyaleCanvas = ({
               const dot = ball.vx * normalX + ball.vy * normalY;
               ball.vx -= 2 * dot * normalX;
               ball.vy -= 2 * dot * normalY;
-              
+
               // Speed up
               ball.speed = Math.min(ball.speed * 1.05, MAX_BALL_SPEED);
               const currentSpeed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
               ball.vx = (ball.vx / currentSpeed) * ball.speed;
               ball.vy = (ball.vy / currentSpeed) * ball.speed;
-              
+
               // Move ball away from edge
               ball.x += normalX * 10;
               ball.y += normalY * 10;
+              soundEngine.paddleHit();
             } else if (player && !player.isEliminated) {
               // Missed paddle - player eliminated
+              soundEngine.gameOver(false);
               onPlayerEliminated?.(player.id);
               resetBall();
             }

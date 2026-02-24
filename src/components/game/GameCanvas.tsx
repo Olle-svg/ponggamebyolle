@@ -1,4 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { soundEngine } from '@/lib/sound';
+
+export type Difficulty = 'easy' | 'medium' | 'hard';
 
 interface GameCanvasProps {
   isTwoPlayer: boolean;
@@ -6,6 +9,7 @@ interface GameCanvasProps {
   onGameOver: (winner: string) => void;
   isPlaying: boolean;
   winScore: number;
+  difficulty?: Difficulty;
 }
 
 interface GameState {
@@ -21,12 +25,13 @@ const PADDLE_SPEED = 8;
 const INITIAL_BALL_SPEED = 6;
 const MAX_BALL_SPEED = 12;
 
-export const GameCanvas = ({ 
-  isTwoPlayer, 
-  onScoreUpdate, 
-  onGameOver, 
+export const GameCanvas = ({
+  isTwoPlayer,
+  onScoreUpdate,
+  onGameOver,
   isPlaying,
-  winScore 
+  winScore,
+  difficulty = 'medium',
 }: GameCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameStateRef = useRef<GameState | null>(null);
@@ -70,23 +75,44 @@ export const GameCanvas = ({
     const paddle = state.paddle2;
     const ball = state.ball;
     const paddleCenter = paddle.y + PADDLE_HEIGHT / 2;
-    const aiSpeed = PADDLE_SPEED * 0.7;
+
+    const aiSpeed = PADDLE_SPEED * (difficulty === 'easy' ? 0.4 : difficulty === 'hard' ? 0.95 : 0.7);
+    const deadZone = difficulty === 'easy' ? 55 : difficulty === 'hard' ? 5 : 30;
+    const centerDeadZone = difficulty === 'easy' ? 25 : difficulty === 'hard' ? 3 : 10;
 
     if (ball.vx > 0) {
-      if (paddleCenter < ball.y - 30) {
+      let targetY = ball.y;
+
+      // Hard mode: predict where the ball will be when it arrives at the paddle
+      if (difficulty === 'hard') {
+        const canvas = canvasRef.current;
+        if (canvas) {
+          const distToPaddle = canvas.width - 30 - PADDLE_WIDTH - ball.x;
+          const timeToReach = distToPaddle / Math.abs(ball.vx);
+          let predictedY = ball.y + ball.vy * timeToReach;
+          // Simulate wall bounces
+          const playableHeight = canvas.height - BALL_SIZE;
+          let norm = predictedY - BALL_SIZE / 2;
+          norm = ((norm % (2 * playableHeight)) + 2 * playableHeight) % (2 * playableHeight);
+          if (norm > playableHeight) norm = 2 * playableHeight - norm;
+          targetY = norm + BALL_SIZE / 2;
+        }
+      }
+
+      if (paddleCenter < targetY - deadZone) {
         paddle.y = Math.min(paddle.y + aiSpeed, height - PADDLE_HEIGHT);
-      } else if (paddleCenter > ball.y + 30) {
+      } else if (paddleCenter > targetY + deadZone) {
         paddle.y = Math.max(paddle.y - aiSpeed, 0);
       }
     } else {
       const centerY = height / 2 - PADDLE_HEIGHT / 2;
-      if (paddle.y < centerY - 10) {
+      if (paddle.y < centerY - centerDeadZone) {
         paddle.y += aiSpeed * 0.5;
-      } else if (paddle.y > centerY + 10) {
+      } else if (paddle.y > centerY + centerDeadZone) {
         paddle.y -= aiSpeed * 0.5;
       }
     }
-  }, []);
+  }, [difficulty]);
 
   const update = useCallback(() => {
     const canvas = canvasRef.current;
@@ -124,6 +150,7 @@ export const GameCanvas = ({
     if (state.ball.y <= BALL_SIZE / 2 || state.ball.y >= height - BALL_SIZE / 2) {
       state.ball.vy *= -1;
       state.ball.y = Math.max(BALL_SIZE / 2, Math.min(height - BALL_SIZE / 2, state.ball.y));
+      soundEngine.wallBounce();
     }
 
     // Ball collision with paddles
@@ -143,6 +170,7 @@ export const GameCanvas = ({
       state.ball.vy = hitPos * 10;
       state.ball.speed = Math.min(state.ball.speed * 1.05, MAX_BALL_SPEED);
       state.ball.x = paddle1Right + BALL_SIZE / 2;
+      soundEngine.paddleHit();
     }
 
     // Right paddle collision
@@ -158,13 +186,16 @@ export const GameCanvas = ({
       state.ball.vy = hitPos * 10;
       state.ball.speed = Math.min(state.ball.speed * 1.05, MAX_BALL_SPEED);
       state.ball.x = paddle2Left - BALL_SIZE / 2;
+      soundEngine.paddleHit();
     }
 
     // Scoring
     if (state.ball.x < 0) {
       state.paddle2.score++;
       onScoreUpdate(state.paddle1.score, state.paddle2.score);
+      soundEngine.score();
       if (state.paddle2.score >= winScore) {
+        soundEngine.gameOver(false);
         onGameOver(isTwoPlayer ? 'Player 2' : 'AI');
         return;
       }
@@ -174,7 +205,9 @@ export const GameCanvas = ({
     if (state.ball.x > width) {
       state.paddle1.score++;
       onScoreUpdate(state.paddle1.score, state.paddle2.score);
+      soundEngine.score();
       if (state.paddle1.score >= winScore) {
+        soundEngine.gameOver(true);
         onGameOver('Player 1');
         return;
       }
@@ -210,12 +243,12 @@ export const GameCanvas = ({
 
     // Draw paddles with glow
     ctx.shadowBlur = 25;
-    
+
     // Paddle 1 (Cyan)
     ctx.shadowColor = 'hsl(180, 100%, 50%)';
     ctx.fillStyle = 'hsl(180, 100%, 50%)';
     ctx.fillRect(30, state.paddle1.y, PADDLE_WIDTH, PADDLE_HEIGHT);
-    
+
     // Paddle 2 (Pink)
     ctx.shadowColor = 'hsl(320, 100%, 60%)';
     ctx.fillStyle = 'hsl(320, 100%, 60%)';
