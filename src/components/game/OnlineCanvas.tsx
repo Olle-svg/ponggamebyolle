@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { PartyState } from '@/hooks/useMultiplayer';
+import { soundEngine } from '@/lib/sound';
 
 interface OnlineCanvasProps {
   party: PartyState;
@@ -33,8 +34,8 @@ export const OnlineCanvas = ({
   const keysRef = useRef<Set<string>>(new Set());
   const animationRef = useRef<number | null>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 500 });
-  
-  // Local ball state for host (for smooth physics)
+
+  // Local ball state for host (smooth physics)
   const localBallRef = useRef({
     x: 400,
     y: 250,
@@ -42,14 +43,15 @@ export const OnlineCanvas = ({
     vy: 0,
     speed: INITIAL_BALL_SPEED,
   });
-  
+
   const localPaddleRef = useRef({ y: 200 });
-  const lastUpdateRef = useRef(0);
+  const paddleUpdateRef = useRef(0); // separate throttle ref for paddle
+  const ballUpdateRef = useRef(0);   // separate throttle ref for ball
 
   const resetBall = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     localBallRef.current = {
       x: canvas.width / 2,
       y: canvas.height / 2,
@@ -84,16 +86,16 @@ export const OnlineCanvas = ({
       }
     }
 
-    // Throttle paddle updates to reduce network traffic
-    if (now - lastUpdateRef.current > 50) {
-      onPaddleMove(localPaddleRef.current.y);
-      lastUpdateRef.current = now;
+    // Throttle paddle updates — send normalized 0-100 percentage, not raw pixels
+    if (now - paddleUpdateRef.current > 50) {
+      onPaddleMove((localPaddleRef.current.y / height) * 100);
+      paddleUpdateRef.current = now;
     }
 
     // Only host handles ball physics
     if (isHost) {
       const ball = localBallRef.current;
-      
+
       ball.x += ball.vx;
       ball.y += ball.vy;
 
@@ -101,13 +103,14 @@ export const OnlineCanvas = ({
       if (ball.y <= BALL_SIZE / 2 || ball.y >= height - BALL_SIZE / 2) {
         ball.vy *= -1;
         ball.y = Math.max(BALL_SIZE / 2, Math.min(height - BALL_SIZE / 2, ball.y));
+        soundEngine.wallBounce();
       }
 
       const paddle1Right = 30 + PADDLE_WIDTH;
       const paddle2Left = width - 30 - PADDLE_WIDTH;
 
-      // Host paddle (left)
-      const hostPaddleY = party.host_paddle_y * (height / 100) || localPaddleRef.current.y;
+      // Host paddle (left) — use local position for accurate collision
+      const hostPaddleY = localPaddleRef.current.y;
       if (
         ball.x - BALL_SIZE / 2 <= paddle1Right &&
         ball.x + BALL_SIZE / 2 >= 30 &&
@@ -120,10 +123,11 @@ export const OnlineCanvas = ({
         ball.vy = hitPos * 10;
         ball.speed = Math.min(ball.speed * 1.05, MAX_BALL_SPEED);
         ball.x = paddle1Right + BALL_SIZE / 2;
+        soundEngine.paddleHit();
       }
 
-      // Guest paddle (right)
-      const guestPaddleY = party.guest_paddle_y * (height / 100) || height / 2 - PADDLE_HEIGHT / 2;
+      // Guest paddle (right) — read normalized value from party state
+      const guestPaddleY = (party.guest_paddle_y / 100) * height || height / 2 - PADDLE_HEIGHT / 2;
       if (
         ball.x + BALL_SIZE / 2 >= paddle2Left &&
         ball.x - BALL_SIZE / 2 <= width - 30 &&
@@ -136,6 +140,7 @@ export const OnlineCanvas = ({
         ball.vy = hitPos * 10;
         ball.speed = Math.min(ball.speed * 1.05, MAX_BALL_SPEED);
         ball.x = paddle2Left - BALL_SIZE / 2;
+        soundEngine.paddleHit();
       }
 
       // Scoring
@@ -145,7 +150,9 @@ export const OnlineCanvas = ({
       if (ball.x < 0) {
         guestScore++;
         onScore(hostScore, guestScore);
+        soundEngine.score();
         if (guestScore >= winScore) {
+          soundEngine.gameOver(false);
           onGameOver('Guest');
           return;
         }
@@ -155,21 +162,24 @@ export const OnlineCanvas = ({
       if (ball.x > width) {
         hostScore++;
         onScore(hostScore, guestScore);
+        soundEngine.score();
         if (hostScore >= winScore) {
+          soundEngine.gameOver(true);
           onGameOver('Host');
           return;
         }
         resetBall();
       }
 
-      // Send ball updates
-      if (now - lastUpdateRef.current > 30) {
+      // Send ball updates on a separate throttle
+      if (now - ballUpdateRef.current > 30) {
         onBallUpdate(
           (ball.x / width) * 100,
           (ball.y / height) * 100,
           ball.vx,
-          ball.vy
+          ball.vy,
         );
+        ballUpdateRef.current = now;
       }
     }
   }, [isHost, isPlaying, party, onPaddleMove, onBallUpdate, onScore, onGameOver, winScore, resetBall]);
@@ -202,29 +212,29 @@ export const OnlineCanvas = ({
     ctx.shadowBlur = 25;
 
     // Host paddle (left - cyan)
-    const hostPaddleY = isHost 
-      ? localPaddleRef.current.y 
+    const hostPaddleY = isHost
+      ? localPaddleRef.current.y
       : (party.host_paddle_y / 100) * height;
     ctx.shadowColor = 'hsl(180, 100%, 50%)';
     ctx.fillStyle = 'hsl(180, 100%, 50%)';
     ctx.fillRect(30, hostPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
 
     // Guest paddle (right - pink)
-    const guestPaddleY = !isHost 
-      ? localPaddleRef.current.y 
+    const guestPaddleY = !isHost
+      ? localPaddleRef.current.y
       : (party.guest_paddle_y / 100) * height;
     ctx.shadowColor = 'hsl(320, 100%, 60%)';
     ctx.fillStyle = 'hsl(320, 100%, 60%)';
     ctx.fillRect(width - 30 - PADDLE_WIDTH, guestPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
 
     // Ball
-    const ballX = isHost 
-      ? localBallRef.current.x 
+    const ballX = isHost
+      ? localBallRef.current.x
       : (party.ball_x / 100) * width;
-    const ballY = isHost 
-      ? localBallRef.current.y 
+    const ballY = isHost
+      ? localBallRef.current.y
       : (party.ball_y / 100) * height;
-    
+
     ctx.shadowColor = 'hsl(50, 100%, 50%)';
     ctx.shadowBlur = 30;
     ctx.fillStyle = 'hsl(50, 100%, 50%)';
@@ -262,7 +272,6 @@ export const OnlineCanvas = ({
   }, []);
 
   useEffect(() => {
-    // Initialize local paddle position
     const canvas = canvasRef.current;
     if (canvas) {
       localPaddleRef.current.y = (canvas.height - PADDLE_HEIGHT) / 2;

@@ -56,6 +56,7 @@ export const useMultiplayer = () => {
           party_code: partyCode,
           host_id: playerId,
           game_status: 'waiting',
+          player_ids: [playerId],
         })
         .select()
         .single();
@@ -99,11 +100,13 @@ export const useMultiplayer = () => {
       }
 
       // Join the party
+      const existingPlayerIds: string[] = Array.isArray(existingParty.player_ids) ? existingParty.player_ids : [];
       const { data, error: updateError } = await supabase
         .from('game_parties')
-        .update({ 
+        .update({
           guest_id: playerId,
-          game_status: 'playing' 
+          game_status: 'playing',
+          player_ids: [...existingPlayerIds, playerId],
         })
         .eq('id', existingParty.id)
         .select()

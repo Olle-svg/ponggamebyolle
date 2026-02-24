@@ -11,10 +11,11 @@ import { JoinParty } from '@/components/game/JoinParty';
 import { PlayerCountSelector } from '@/components/game/PlayerCountSelector';
 import { useMultiplayer } from '@/hooks/useMultiplayer';
 import { ArrowLeft, Play, Pause, Wifi } from 'lucide-react';
+import { Difficulty } from '@/components/game/GameCanvas';
 
 const WIN_SCORE = 5;
 
-type GameScreen = 'menu' | 'join-party' | 'party-lobby' | 'player-count' | 'playing-local' | 'playing-online' | 'playing-battle-royale';
+type GameScreen = 'menu' | 'join-party' | 'party-lobby' | 'player-count' | 'difficulty-select' | 'playing-local' | 'playing-online' | 'playing-battle-royale';
 
 const Index = () => {
   const [screen, setScreen] = useState<GameScreen>('menu');
@@ -24,6 +25,7 @@ const Index = () => {
   const [winner, setWinner] = useState<string | null>(null);
   const [gameKey, setGameKey] = useState(0);
   const [selectedPlayerCount, setSelectedPlayerCount] = useState(3);
+  const [difficulty, setDifficulty] = useState<Difficulty>('medium');
 
   const {
     party,
@@ -49,13 +51,18 @@ const Index = () => {
     name: string;
   }>>([]);
 
+  const handleDifficultySelect = (diff: Difficulty) => {
+    setDifficulty(diff);
+    setScreen('playing-local');
+    setIsPlaying(true);
+    setScores({ player1: 0, player2: 0 });
+    setWinner(null);
+  };
+
   const handleSelectMode = async (mode: 'single' | 'local' | 'online-create' | 'online-join') => {
     if (mode === 'single') {
       setIsTwoPlayer(false);
-      setScreen('playing-local');
-      setIsPlaying(true);
-      setScores({ player1: 0, player2: 0 });
-      setWinner(null);
+      setScreen('difficulty-select');
     } else if (mode === 'local') {
       setIsTwoPlayer(true);
       setScreen('playing-local');
@@ -72,9 +79,9 @@ const Index = () => {
   const handleCreateBattleRoyaleParty = async () => {
     const code = await createParty();
     if (code) {
-      // Initialize battle royale players
+      // Initialize battle royale players — use real playerId for host slot
       const players = Array.from({ length: selectedPlayerCount }, (_, i) => ({
-        id: i === 0 ? 'host' : `waiting_${i}`,
+        id: i === 0 ? playerId : `waiting_${i}`,
         angle: (360 / selectedPlayerCount) * i,
         paddlePos: 0,
         isEliminated: false,
@@ -181,6 +188,18 @@ const Index = () => {
     }
   }, [party?.game_status, screen, selectedPlayerCount]);
 
+  // Sync battle royale player IDs from party when guests join
+  useEffect(() => {
+    if (!party?.player_ids || party.player_ids.length === 0) return;
+    setBattlePlayers(prev =>
+      prev.map((p, i) => ({
+        ...p,
+        id: party.player_ids[i] ?? p.id,
+        name: i === 0 ? 'Host' : `Player ${i + 1}`,
+      }))
+    );
+  }, [party?.player_ids]);
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 overflow-hidden relative">
       {/* Background effects */}
@@ -218,6 +237,40 @@ const Index = () => {
               onConfirm={handleCreateBattleRoyaleParty}
               onBack={() => setScreen('menu')}
             />
+          </motion.div>
+        )}
+
+        {screen === 'difficulty-select' && (
+          <motion.div
+            key="difficulty"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="relative z-10 text-center"
+          >
+            <h2 className="text-2xl font-pixel text-accent mb-2 text-glow-purple">SELECT DIFFICULTY</h2>
+            <p className="text-sm text-muted-foreground font-orbitron mb-8">VS AI mode</p>
+            <div className="flex flex-col gap-4 items-center">
+              {(['easy', 'medium', 'hard'] as const).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => handleDifficultySelect(d)}
+                  className="w-48 px-8 py-4 rounded-lg font-pixel text-base uppercase
+                             bg-muted/50 hover:bg-accent/20 border border-accent/30
+                             hover:border-accent transition-all text-foreground hover:text-accent"
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setScreen('menu')}
+              className="mt-8 flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/50 hover:bg-muted
+                         transition-all font-orbitron text-sm text-muted-foreground hover:text-foreground mx-auto"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
           </motion.div>
         )}
 
@@ -314,6 +367,7 @@ const Index = () => {
                   onGameOver={handleGameOver}
                   isPlaying={isPlaying}
                   winScore={WIN_SCORE}
+                  difficulty={isTwoPlayer ? undefined : difficulty}
                 />
               ) : party ? (
                 <OnlineCanvas
@@ -425,7 +479,7 @@ const Index = () => {
                 key={gameKey}
                 players={battlePlayers}
                 isPlaying={isPlaying}
-                localPlayerId={'local'}
+                localPlayerId={playerId}
                 onPaddleMove={updatePaddlePosition}
                 onBallUpdate={(ball) => updateBallState(ball.x, ball.y, ball.vx, ball.vy)}
                 onPlayerEliminated={handlePlayerEliminated}
