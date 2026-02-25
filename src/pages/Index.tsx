@@ -30,6 +30,7 @@ const Index = () => {
   const {
     party,
     isHost,
+    playerId,
     isConnecting,
     error,
     createParty,
@@ -237,6 +238,8 @@ const Index = () => {
               onSelect={setSelectedPlayerCount}
               onConfirm={handleCreateBattleRoyaleParty}
               onBack={() => setScreen('menu')}
+              isLoading={isConnecting}
+              error={error}
             />
           </motion.div>
         )}

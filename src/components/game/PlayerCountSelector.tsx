@@ -6,6 +6,8 @@ interface PlayerCountSelectorProps {
   onSelect: (count: number) => void;
   onConfirm: () => void;
   onBack: () => void;
+  isLoading?: boolean;
+  error?: string | null;
 }
 
 export const PlayerCountSelector = ({
@@ -13,6 +15,8 @@ export const PlayerCountSelector = ({
   onSelect,
   onConfirm,
   onBack,
+  isLoading = false,
+  error = null,
 }: PlayerCountSelectorProps) => {
   const playerCounts = [2, 3, 4, 5];
 
@@ -58,25 +62,31 @@ export const PlayerCountSelector = ({
         </p>
       </div>
 
+      {error && (
+        <p className="text-sm text-destructive font-orbitron">{error}</p>
+      )}
+
       <div className="flex gap-4">
         <motion.button
           onClick={onBack}
+          disabled={isLoading}
           className="px-6 py-3 rounded-lg bg-muted/50 hover:bg-muted transition-all
-                     font-orbitron text-muted-foreground"
+                     font-orbitron text-muted-foreground disabled:opacity-50"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
           Back
         </motion.button>
-        
+
         <motion.button
           onClick={onConfirm}
+          disabled={isLoading}
           className="px-8 py-3 rounded-lg bg-accent hover:bg-accent/80 transition-all
-                     font-orbitron text-accent-foreground font-bold"
+                     font-orbitron text-accent-foreground font-bold disabled:opacity-70"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.98 }}
         >
-          CREATE PARTY
+          {isLoading ? 'CREATING...' : 'CREATE PARTY'}
         </motion.button>
       </div>
     </motion.div>
